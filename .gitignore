@@ -4,5 +4,6 @@ obj/
 .vs/
 appsettings.local.json
 nupkg/
+.claude/settings.local.json
 /probe/probe.csproj
 /probe/Program.cs
