@@ -1,5 +1,4 @@
 using GitHubDigest.Models;
-using Octokit.GraphQL;
 using Polly;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -14,13 +13,11 @@ public interface IGitHubGraphQLClient
 
 public class GitHubGraphQLClient : IGitHubGraphQLClient
 {
-    private readonly Connection _connection;
     private readonly ResiliencePipeline _pipeline;
     private readonly HttpClient _http;
 
-    public GitHubGraphQLClient(Connection connection, ResiliencePipeline pipeline, HttpClient http)
+    public GitHubGraphQLClient(ResiliencePipeline pipeline, HttpClient http)
     {
-        _connection = connection;
         _pipeline = pipeline;
         _http = http;
     }
@@ -30,22 +27,39 @@ public class GitHubGraphQLClient : IGitHubGraphQLClient
         var from = DateTimeOffset.UtcNow.AddDays(-sinceDays);
         var to = DateTimeOffset.UtcNow;
 
-        var query = new Query()
-            .Viewer
-            .ContributionsCollection(from: from, to: to)
-            .Select(c => new
-            {
-                c.TotalCommitContributions,
-                c.TotalPullRequestReviewContributions
-            })
-            .Compile();
+        var payload = new
+        {
+            query = """
+                query($from: DateTime!, $to: DateTime!) {
+                  viewer {
+                    contributionsCollection(from: $from, to: $to) {
+                      totalCommitContributions
+                      totalPullRequestContributions
+                      totalPullRequestReviewContributions
+                    }
+                  }
+                }
+                """,
+            variables = new { from = from.ToString("o"), to = to.ToString("o") }
+        };
 
-        var result = await _pipeline.ExecuteAsync(async ct => await _connection.Run(query, cancellationToken: ct), ct);
+        var response = await _pipeline.ExecuteAsync(async ct =>
+        {
+            var resp = await _http.PostAsJsonAsync("https://api.github.com/graphql", payload, ct);
+            resp.EnsureSuccessStatusCode();
+            return resp;
+        }, ct);
+
+        using var doc = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(ct), cancellationToken: ct);
+        var c = doc.RootElement
+            .GetProperty("data")
+            .GetProperty("viewer")
+            .GetProperty("contributionsCollection");
 
         return new ContributionSummary(
-            TotalCommits: result.TotalCommitContributions,
-            TotalPullRequestsOpened: 0,
-            TotalReviewsGiven: result.TotalPullRequestReviewContributions,
+            TotalCommits: c.GetProperty("totalCommitContributions").GetInt32(),
+            TotalPullRequestsOpened: c.GetProperty("totalPullRequestContributions").GetInt32(),
+            TotalReviewsGiven: c.GetProperty("totalPullRequestReviewContributions").GetInt32(),
             From: from,
             To: to
         );

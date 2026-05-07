@@ -6,7 +6,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Polly;
 using System.Net.Http.Headers;
 using OctokitRest = Octokit;
-using OctokitGQL = Octokit.GraphQL;
 
 if (args.Length > 0 && args[0] is "--version" or "--help" or "-?" or "-h")
 {
@@ -46,9 +45,6 @@ services.AddSingleton<OctokitRest.GitHubClient>(_ =>
     client.Credentials = new OctokitRest.Credentials(token);
     return client;
 });
-
-services.AddSingleton<OctokitGQL.Connection>(_ =>
-    new OctokitGQL.Connection(new OctokitGQL.ProductHeaderValue("github-digest", "0.1.0"), token));
 
 services.AddSingleton<IGitHubRestClient, GitHubRestClient>();
 services.AddSingleton<IGitHubGraphQLClient, GitHubGraphQLClient>();
