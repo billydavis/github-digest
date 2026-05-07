@@ -103,6 +103,10 @@ dotnet run -- --since 14d --output markdown
 dotnet run -- --repo owner/myrepo
 ```
 
+## Known limitations / future candidates
+- **Pagination** — Search API caps results at 30 per page. Users with >30 open PRs or issues will see silent truncation. Fix: page through results using `SearchIssuesRequest.Page`.
+- **`--since all`** — Support an `all` value to show PRs with no date filter, useful for auditing old repos. Issues should remain capped to avoid overwhelming output.
+
 ## Pack as tool
 ```sh
 dotnet pack
