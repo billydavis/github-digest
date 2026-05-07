@@ -13,12 +13,12 @@ public class DigestCommand : RootCommand
     private readonly Option<string?> _repoOption;
     private readonly Option<string> _outputOption;
 
-    public DigestCommand(DigestService digestService, TerminalRenderer terminalRenderer, MarkdownRenderer markdownRenderer)
+    public DigestCommand(DigestService digestService, TerminalRenderer terminalRenderer, MarkdownRenderer markdownRenderer, JsonRenderer jsonRenderer)
         : base("Produce a morning briefing of your GitHub activity")
     {
         _sinceOption = new Option<string>("--since") { DefaultValueFactory = _ => "14d", Description = "Lookback window (e.g. 7d, 14d, 30d)" };
         _repoOption = new Option<string?>("--repo") { Description = "Scope to an org (github) or specific repo (github/gh-aw-threat-detection)" };
-        _outputOption = new Option<string>("--output") { DefaultValueFactory = _ => "terminal", Description = "Output format: terminal or markdown" };
+        _outputOption = new Option<string>("--output") { DefaultValueFactory = _ => "terminal", Description = "Output format: terminal, markdown, or json" };
 
         Add(_sinceOption);
         Add(_repoOption);
@@ -32,6 +32,13 @@ public class DigestCommand : RootCommand
 
             var sinceDays = ParseSinceDays(since);
             DigestReport? report = null;
+
+            if (output == "json")
+            {
+                report = await digestService.BuildReportAsync(sinceDays, repo, ct);
+                Console.WriteLine(jsonRenderer.Render(report));
+                return;
+            }
 
             await AnsiConsole.Status()
                 .Spinner(Spinner.Known.Dots)

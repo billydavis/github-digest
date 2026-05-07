@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace GitHubDigest.Models;
 
 public record PullRequestSummary(
@@ -10,7 +12,7 @@ public record PullRequestSummary(
     DateTimeOffset UpdatedAt,
     ReviewStatus ReviewStatus,
     string? BaseRef,
-    string? NodeId
+    [property: JsonIgnore] string? NodeId
 );
 
 public enum ReviewStatus
