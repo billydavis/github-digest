@@ -50,7 +50,7 @@ public class DigestCommand : RootCommand
             }
             else
             {
-                terminalRenderer.Render(report!);
+                terminalRenderer.Render(report!, sinceDays);
             }
         });
     }

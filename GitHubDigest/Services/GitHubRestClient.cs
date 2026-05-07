@@ -7,6 +7,7 @@ namespace GitHubDigest.Services;
 
 public interface IGitHubRestClient
 {
+    Task<string> GetCurrentUserLoginAsync(CancellationToken ct = default);
     Task<IReadOnlyList<PullRequestSummary>> GetMyOpenPullRequestsAsync(string? repoFilter, CancellationToken ct = default);
     Task<IReadOnlyList<IssueSummary>> GetMyAssignedIssuesAsync(int sinceDays, string? repoFilter, CancellationToken ct = default);
 }
@@ -20,6 +21,12 @@ public class GitHubRestClient : IGitHubRestClient
     {
         _client = client;
         _pipeline = pipeline;
+    }
+
+    public async Task<string> GetCurrentUserLoginAsync(CancellationToken ct = default)
+    {
+        var user = await _pipeline.ExecuteAsync(async ct => await _client.User.Current(), ct);
+        return user.Login;
     }
 
     public async Task<IReadOnlyList<PullRequestSummary>> GetMyOpenPullRequestsAsync(string? repoFilter, CancellationToken ct = default)

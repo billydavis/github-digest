@@ -8,35 +8,32 @@ public class TerminalRenderer
 {
     private const int MaxTitleWidth = 60;
 
-    // Keeps only printable ASCII + Latin Extended (covers accented Western European chars).
-    // Drops CJK, Arabic, emoji, and anything else that breaks terminal column width measurement.
-    private static string Sanitize(string text, int maxWidth = int.MaxValue)
+    public void Render(DigestReport report, int sinceDays)
     {
-        var sb = new StringBuilder(text.Length);
-        foreach (var c in text.EnumerateRunes())
-        {
-            if (Rune.IsControl(c)) continue;
-            if (c.Value > 0x024F) continue;           // keep Basic Latin + Latin Extended-A/B only
-            sb.Append(c.ToString());
-        }
-        var result = sb.ToString().Trim();
-        if (result.Length > maxWidth)
-            result = result[..maxWidth].TrimEnd() + "…";
-        return result;
-    }
-    public void Render(DigestReport report)
-    {
-        AnsiConsole.Write(new Rule("[bold yellow]GitHub Digest[/]").RuleStyle("grey"));
+        AnsiConsole.MarkupLine(
+            $"[bold white]GitHub Digest[/] [grey]·[/] [white]{DateTime.Now:ddd MMM d}[/] [grey]·[/] [yellow]{Markup.Escape(report.Username)}[/]");
+        AnsiConsole.Write(new Rule().RuleStyle("grey dim"));
         AnsiConsole.WriteLine();
 
-        RenderPullRequests(report.OpenPullRequests);
-        RenderIssues(report.AssignedIssues);
-        RenderContributions(report.Contributions);
+        RenderContributions(report.Contributions, sinceDays);
+        RenderPullRequests(report.OpenPullRequests, sinceDays);
+        RenderIssues(report.AssignedIssues, sinceDays);
     }
 
-    private static void RenderPullRequests(IReadOnlyList<PullRequestSummary> prs)
+    private static void RenderContributions(ContributionSummary c, int sinceDays)
     {
-        AnsiConsole.Write(new Rule("[bold green]Open Pull Requests[/]").LeftJustified().RuleStyle("grey"));
+        AnsiConsole.MarkupLine($"[yellow]{SinceLabel(sinceDays)}[/]");
+        AnsiConsole.MarkupLine(
+            $"[bold]{c.TotalCommits}[/] [grey]commits[/]  " +
+            $"[bold]{c.TotalPullRequestsOpened}[/] [grey]PRs opened[/]  " +
+            $"[bold]{c.TotalReviewsGiven}[/] [grey]reviews given[/]");
+        AnsiConsole.WriteLine();
+    }
+
+    private static void RenderPullRequests(IReadOnlyList<PullRequestSummary> prs, int sinceDays)
+    {
+        AnsiConsole.MarkupLine($"[yellow]Open pull requests ({prs.Count})[/]");
+        AnsiConsole.WriteLine();
 
         if (prs.Count == 0)
         {
@@ -46,30 +43,29 @@ public class TerminalRenderer
         }
 
         var table = new Table()
-            .Border(TableBorder.Rounded)
-            .AddColumn(new TableColumn("[bold]Repo[/]"))
-            .AddColumn(new TableColumn("[bold]#[/]").RightAligned())
-            .AddColumn(new TableColumn("[bold]Title[/]"))
-            .AddColumn(new TableColumn("[bold]Review[/]"))
-            .AddColumn(new TableColumn("[bold]Updated[/]").RightAligned());
+            .Border(TableBorder.Simple)
+            .BorderStyle(new Style(Color.Grey))
+            .AddColumn(new TableColumn("[grey]Repo[/]"))
+            .AddColumn(new TableColumn("[grey]Title[/]"))
+            .AddColumn(new TableColumn("[grey]Review status[/]"))
+            .AddColumn(new TableColumn("[grey]Updated[/]"));
 
         foreach (var pr in prs.OrderByDescending(p => p.UpdatedAt))
         {
             var reviewMarkup = pr.ReviewStatus switch
             {
                 ReviewStatus.Approved => "[green]Approved[/]",
-                ReviewStatus.ChangesRequested => "[red]Changes Requested[/]",
-                ReviewStatus.NeedsReview => "[yellow]Needs Review[/]",
+                ReviewStatus.ChangesRequested => "[red]Changes requested[/]",
+                ReviewStatus.NeedsReview => "[yellow]Awaiting review[/]",
                 ReviewStatus.Merged => "[blue]Merged[/]",
                 _ => "[grey]Unknown[/]"
             };
 
             table.AddRow(
-                Markup.Escape(Sanitize(pr.Repo)),
-                $"[blue]#{pr.Number}[/]",
+                $"[cyan]{Markup.Escape(Sanitize(pr.Repo))}[/]",
                 Markup.Escape(Sanitize(pr.Title, MaxTitleWidth)),
                 reviewMarkup,
-                pr.UpdatedAt.LocalDateTime.ToString("MMM d")
+                RelativeTime(pr.UpdatedAt)
             );
         }
 
@@ -77,9 +73,10 @@ public class TerminalRenderer
         AnsiConsole.WriteLine();
     }
 
-    private static void RenderIssues(IReadOnlyList<IssueSummary> issues)
+    private static void RenderIssues(IReadOnlyList<IssueSummary> issues, int sinceDays)
     {
-        AnsiConsole.Write(new Rule("[bold blue]Assigned Issues[/]").LeftJustified().RuleStyle("grey"));
+        AnsiConsole.MarkupLine($"[yellow]Assigned issues, {SinceLabel(sinceDays).ToLower()} ({issues.Count})[/]");
+        AnsiConsole.WriteLine();
 
         if (issues.Count == 0)
         {
@@ -89,25 +86,24 @@ public class TerminalRenderer
         }
 
         var table = new Table()
-            .Border(TableBorder.Rounded)
-            .AddColumn(new TableColumn("[bold]Repo[/]"))
-            .AddColumn(new TableColumn("[bold]#[/]").RightAligned())
-            .AddColumn(new TableColumn("[bold]Title[/]"))
-            .AddColumn(new TableColumn("[bold]Labels[/]"))
-            .AddColumn(new TableColumn("[bold]Updated[/]").RightAligned());
+            .Border(TableBorder.Simple)
+            .BorderStyle(new Style(Color.Grey))
+            .AddColumn(new TableColumn("[grey]Repo[/]"))
+            .AddColumn(new TableColumn("[grey]Title[/]"))
+            .AddColumn(new TableColumn("[grey]Labels[/]"))
+            .AddColumn(new TableColumn("[grey]Updated[/]"));
 
         foreach (var issue in issues.OrderByDescending(i => i.UpdatedAt))
         {
-            var labels = issue.Labels.Length > 0
-                ? string.Join(", ", issue.Labels.Select(Markup.Escape))
+            var labelsMarkup = issue.Labels.Length > 0
+                ? string.Join(", ", issue.Labels.Select(l => $"[{LabelColor(l)}]{Markup.Escape(l)}[/]"))
                 : "[grey]-[/]";
 
             table.AddRow(
-                Markup.Escape(Sanitize(issue.Repo)),
-                $"[blue]#{issue.Number}[/]",
+                $"[cyan]{Markup.Escape(Sanitize(issue.Repo))}[/]",
                 Markup.Escape(Sanitize(issue.Title, MaxTitleWidth)),
-                labels,
-                issue.UpdatedAt.LocalDateTime.ToString("MMM d")
+                labelsMarkup,
+                RelativeTime(issue.UpdatedAt)
             );
         }
 
@@ -115,22 +111,43 @@ public class TerminalRenderer
         AnsiConsole.WriteLine();
     }
 
-    private static void RenderContributions(ContributionSummary contributions)
+    private static string SinceLabel(int days) => days switch
     {
-        AnsiConsole.Write(new Rule("[bold magenta]Contribution Summary[/]").LeftJustified().RuleStyle("grey"));
+        7 => "This week",
+        _ => $"Last {days} days"
+    };
 
-        var period = $"{contributions.From:MMM d} – {contributions.To:MMM d, yyyy}";
-        AnsiConsole.MarkupLine($"[grey]Period: {period}[/]");
-        AnsiConsole.WriteLine();
+    private static string RelativeTime(DateTimeOffset dt)
+    {
+        var age = DateTimeOffset.UtcNow - dt;
+        if (age.TotalMinutes < 60) return $"{(int)age.TotalMinutes}m ago";
+        if (age.TotalHours < 24) return $"{(int)age.TotalHours}h ago";
+        if (age.TotalDays < 2) return "yesterday";
+        if (age.TotalDays < 7) return $"{(int)age.TotalDays} days ago";
+        return dt.LocalDateTime.ToString("MMM d");
+    }
 
-        var grid = new Grid()
-            .AddColumn().AddColumn();
+    private static string LabelColor(string label)
+    {
+        var l = label.ToLowerInvariant();
+        if (l.Contains("high") || l.Contains("critical") || l.Contains("urgent")) return "red";
+        if (l.Contains("medium") || l.Contains("moderate")) return "yellow";
+        if (l.Contains("low")) return "grey";
+        return "white";
+    }
 
-        grid.AddRow("[bold]Commits[/]", $"[green]{contributions.TotalCommits}[/]");
-        grid.AddRow("[bold]PRs Opened[/]", $"[green]{contributions.TotalPullRequestsOpened}[/]");
-        grid.AddRow("[bold]Reviews Given[/]", $"[green]{contributions.TotalReviewsGiven}[/]");
-
-        AnsiConsole.Write(grid);
-        AnsiConsole.WriteLine();
+    private static string Sanitize(string text, int maxWidth = int.MaxValue)
+    {
+        var sb = new StringBuilder(text.Length);
+        foreach (var c in text.EnumerateRunes())
+        {
+            if (Rune.IsControl(c)) continue;
+            if (c.Value > 0x024F) continue;
+            sb.Append(c.ToString());
+        }
+        var result = sb.ToString().Trim();
+        if (result.Length > maxWidth)
+            result = result[..maxWidth].TrimEnd() + "…";
+        return result;
     }
 }

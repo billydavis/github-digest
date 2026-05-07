@@ -15,13 +15,7 @@ public class DigestService
 
     public async Task<DigestReport> BuildReportAsync(int sinceDays, string? repoFilter, CancellationToken ct = default)
     {
-        var (prs, issues, contributions) = await FetchAllAsync(sinceDays, repoFilter, ct);
-        return new DigestReport(prs, issues, contributions);
-    }
-
-    private async Task<(IReadOnlyList<PullRequestSummary>, IReadOnlyList<IssueSummary>, ContributionSummary)> FetchAllAsync(
-        int sinceDays, string? repoFilter, CancellationToken ct)
-    {
+        var usernameTask = _rest.GetCurrentUserLoginAsync(ct);
         var prsTask = _rest.GetMyOpenPullRequestsAsync(repoFilter, ct);
         var issuesTask = _rest.GetMyAssignedIssuesAsync(sinceDays, repoFilter, ct);
         var contributionsTask = _graphql.GetContributionSummaryAsync(sinceDays, ct);
@@ -29,7 +23,7 @@ public class DigestService
         var prs = await prsTask;
         var reviewDecisionsTask = _graphql.GetReviewDecisionsAsync(prs, ct);
 
-        await Task.WhenAll(issuesTask, contributionsTask, reviewDecisionsTask);
+        await Task.WhenAll(usernameTask, issuesTask, contributionsTask, reviewDecisionsTask);
 
         var reviewDecisions = await reviewDecisionsTask;
         var prsWithReviews = prs
@@ -38,6 +32,6 @@ public class DigestService
                 : pr)
             .ToList();
 
-        return (prsWithReviews, await issuesTask, await contributionsTask);
+        return new DigestReport(prsWithReviews, await issuesTask, await contributionsTask, await usernameTask);
     }
 }

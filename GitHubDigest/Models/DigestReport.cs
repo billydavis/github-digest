@@ -3,7 +3,8 @@ namespace GitHubDigest.Models;
 public record DigestReport(
     IReadOnlyList<PullRequestSummary> OpenPullRequests,
     IReadOnlyList<IssueSummary> AssignedIssues,
-    ContributionSummary Contributions
+    ContributionSummary Contributions,
+    string Username
 );
 
 public record ContributionSummary(
