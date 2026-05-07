@@ -93,7 +93,7 @@ Default: Spectre.Console colored table in terminal
 4. ✅ GraphQL client — contribution summary
 5. ⬜ Polly rate limit handling
 6. ✅ `--output markdown` export
-7. ⬜ `dotnet tool` packaging validation + publish
+7. ✅ `dotnet tool` packaging validation + publish
 
 ## Build & run
 ```sh
