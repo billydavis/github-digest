@@ -11,7 +11,7 @@ if (args.Length > 0 && args[0] is "--version" or "--help" or "-?" or "-h")
 {
     var meta = new System.CommandLine.RootCommand("Produce a morning briefing of your GitHub activity");
     meta.Add(new System.CommandLine.Option<string>("--since") { DefaultValueFactory = _ => "14d", Description = "Lookback window (e.g. 7d, 14d, 30d)" });
-    meta.Add(new System.CommandLine.Option<string?>("--repo") { Description = "Scope to a specific repo (owner/name)" });
+    meta.Add(new System.CommandLine.Option<string?>("--repo") { Description = "Scope to an org (github) or specific repo (github/gh-aw-threat-detection)" });
     meta.Add(new System.CommandLine.Option<string>("--output") { DefaultValueFactory = _ => "terminal", Description = "Output format: terminal or markdown" });
     return await meta.Parse(args).InvokeAsync();
 }

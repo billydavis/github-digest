@@ -17,7 +17,7 @@ public class DigestCommand : RootCommand
         : base("Produce a morning briefing of your GitHub activity")
     {
         _sinceOption = new Option<string>("--since") { DefaultValueFactory = _ => "14d", Description = "Lookback window (e.g. 7d, 14d, 30d)" };
-        _repoOption = new Option<string?>("--repo") { Description = "Scope to a specific repo (owner/name)" };
+        _repoOption = new Option<string?>("--repo") { Description = "Scope to an org (github) or specific repo (github/gh-aw-threat-detection)" };
         _outputOption = new Option<string>("--output") { DefaultValueFactory = _ => "terminal", Description = "Output format: terminal or markdown" };
 
         Add(_sinceOption);

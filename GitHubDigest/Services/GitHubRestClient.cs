@@ -43,6 +43,7 @@ public class GitHubRestClient : IGitHubRestClient
         var result = await _pipeline.ExecuteAsync(async ct => await _client.Search.SearchIssues(request), ct);
 
         return result.Items
+            .Where(i => MatchesFilter(i, repoFilter, i => ExtractRepo(i.HtmlUrl)))
             .Select(i => new Models.PullRequestSummary(
                 Repo: ExtractRepo(i.HtmlUrl),
                 Number: i.Number,
@@ -75,6 +76,7 @@ public class GitHubRestClient : IGitHubRestClient
         var result = await _pipeline.ExecuteAsync(async ct => await _client.Search.SearchIssues(request), ct);
 
         return result.Items
+            .Where(i => MatchesFilter(i, repoFilter, i => ExtractRepo(i.HtmlUrl)))
             .Select(i => new IssueSummary(
                 Repo: ExtractRepo(i.HtmlUrl),
                 Number: i.Number,
@@ -93,8 +95,16 @@ public class GitHubRestClient : IGitHubRestClient
         var parts = repoFilter.Split('/');
         if (parts.Length == 2)
             request.Repos.Add(parts[0], parts[1]);
-        else
-            AnsiConsole.MarkupLine($"[yellow]Invalid --repo value '{repoFilter}' — expected owner/name (e.g. microsoft/vscode). Filter ignored.[/]");
+        // org-only filter is applied client-side after fetch
+    }
+
+    private static bool MatchesFilter<T>(T item, string? repoFilter, Func<T, string> getRepo)
+    {
+        if (repoFilter is null) return true;
+        var repo = getRepo(item);
+        return repoFilter.Contains('/')
+            ? repo.Equals(repoFilter, StringComparison.OrdinalIgnoreCase)
+            : repo.StartsWith(repoFilter + "/", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string ExtractRepo(string htmlUrl)
