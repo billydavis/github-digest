@@ -1,5 +1,6 @@
 using GitHubDigest.Models;
 using Octokit;
+using Polly;
 
 namespace GitHubDigest.Services;
 
@@ -12,10 +13,12 @@ public interface IGitHubRestClient
 public class GitHubRestClient : IGitHubRestClient
 {
     private readonly GitHubClient _client;
+    private readonly ResiliencePipeline _pipeline;
 
-    public GitHubRestClient(GitHubClient client)
+    public GitHubRestClient(GitHubClient client, ResiliencePipeline pipeline)
     {
         _client = client;
+        _pipeline = pipeline;
     }
 
     public async Task<IReadOnlyList<PullRequestSummary>> GetMyOpenPullRequestsAsync(string? repoFilter, CancellationToken ct = default)
@@ -33,7 +36,7 @@ public class GitHubRestClient : IGitHubRestClient
                 request.Repos.Add(parts[0], parts[1]);
         }
 
-        var result = await _client.Search.SearchIssues(request);
+        var result = await _pipeline.ExecuteAsync(async ct => await _client.Search.SearchIssues(request), ct);
 
         return result.Items
             .Select(i => new Models.PullRequestSummary(
@@ -68,7 +71,7 @@ public class GitHubRestClient : IGitHubRestClient
                 request.Repos.Add(parts[0], parts[1]);
         }
 
-        var result = await _client.Search.SearchIssues(request);
+        var result = await _pipeline.ExecuteAsync(async ct => await _client.Search.SearchIssues(request), ct);
 
         return result.Items
             .Select(i => new IssueSummary(

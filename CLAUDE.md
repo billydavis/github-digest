@@ -91,7 +91,7 @@ Default: Spectre.Console colored table in terminal
 2. ✅ REST client — open PRs + assigned issues (Search API)
 3. ✅ Terminal renderer with Spectre.Console
 4. ✅ GraphQL client — contribution summary
-5. ⬜ Polly rate limit handling
+5. ✅ Polly rate limit handling
 6. ✅ `--output markdown` export
 7. ✅ `dotnet tool` packaging validation + publish
 
