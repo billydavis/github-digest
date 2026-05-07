@@ -9,7 +9,8 @@ public record PullRequestSummary(
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt,
     ReviewStatus ReviewStatus,
-    string? BaseRef
+    string? BaseRef,
+    string? NodeId
 );
 
 public enum ReviewStatus

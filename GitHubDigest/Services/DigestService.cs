@@ -26,8 +26,18 @@ public class DigestService
         var issuesTask = _rest.GetMyAssignedIssuesAsync(sinceDays, repoFilter, ct);
         var contributionsTask = _graphql.GetContributionSummaryAsync(sinceDays, ct);
 
-        await Task.WhenAll(prsTask, issuesTask, contributionsTask);
+        var prs = await prsTask;
+        var reviewDecisionsTask = _graphql.GetReviewDecisionsAsync(prs, ct);
 
-        return (await prsTask, await issuesTask, await contributionsTask);
+        await Task.WhenAll(issuesTask, contributionsTask, reviewDecisionsTask);
+
+        var reviewDecisions = await reviewDecisionsTask;
+        var prsWithReviews = prs
+            .Select(pr => pr.NodeId is not null && reviewDecisions.TryGetValue(pr.NodeId, out var status)
+                ? pr with { ReviewStatus = status }
+                : pr)
+            .ToList();
+
+        return (prsWithReviews, await issuesTask, await contributionsTask);
     }
 }

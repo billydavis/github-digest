@@ -4,6 +4,7 @@ using GitHubDigest.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Polly;
+using System.Net.Http.Headers;
 using OctokitRest = Octokit;
 using OctokitGQL = Octokit.GraphQL;
 
@@ -31,6 +32,13 @@ var services = new ServiceCollection();
 
 services.AddMemoryCache();
 services.AddSingleton<ResiliencePipeline>(_ => GitHubResiliencePipeline.Build());
+services.AddSingleton<HttpClient>(_ =>
+{
+    var http = new HttpClient();
+    http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+    http.DefaultRequestHeaders.UserAgent.ParseAdd("github-digest/0.1.0");
+    return http;
+});
 
 services.AddSingleton<OctokitRest.GitHubClient>(_ =>
 {

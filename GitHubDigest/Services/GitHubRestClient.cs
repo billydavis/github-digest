@@ -1,6 +1,7 @@
 using GitHubDigest.Models;
 using Octokit;
 using Polly;
+using Spectre.Console;
 
 namespace GitHubDigest.Services;
 
@@ -30,11 +31,7 @@ public class GitHubRestClient : IGitHubRestClient
         };
 
         if (repoFilter is not null)
-        {
-            var parts = repoFilter.Split('/');
-            if (parts.Length == 2)
-                request.Repos.Add(parts[0], parts[1]);
-        }
+            ApplyRepoFilter(request, repoFilter);
 
         var result = await _pipeline.ExecuteAsync(async ct => await _client.Search.SearchIssues(request), ct);
 
@@ -48,7 +45,8 @@ public class GitHubRestClient : IGitHubRestClient
                 CreatedAt: i.CreatedAt,
                 UpdatedAt: i.UpdatedAt ?? i.CreatedAt,
                 ReviewStatus: Models.ReviewStatus.Unknown,
-                BaseRef: null
+                BaseRef: null,
+                NodeId: i.NodeId
             ))
             .ToList();
     }
@@ -65,11 +63,7 @@ public class GitHubRestClient : IGitHubRestClient
         };
 
         if (repoFilter is not null)
-        {
-            var parts = repoFilter.Split('/');
-            if (parts.Length == 2)
-                request.Repos.Add(parts[0], parts[1]);
-        }
+            ApplyRepoFilter(request, repoFilter);
 
         var result = await _pipeline.ExecuteAsync(async ct => await _client.Search.SearchIssues(request), ct);
 
@@ -85,6 +79,15 @@ public class GitHubRestClient : IGitHubRestClient
                 Labels: i.Labels.Select(l => l.Name).ToArray()
             ))
             .ToList();
+    }
+
+    private static void ApplyRepoFilter(SearchIssuesRequest request, string repoFilter)
+    {
+        var parts = repoFilter.Split('/');
+        if (parts.Length == 2)
+            request.Repos.Add(parts[0], parts[1]);
+        else
+            AnsiConsole.MarkupLine($"[yellow]Invalid --repo value '{repoFilter}' — expected owner/name (e.g. microsoft/vscode). Filter ignored.[/]");
     }
 
     private static string ExtractRepo(string htmlUrl)
