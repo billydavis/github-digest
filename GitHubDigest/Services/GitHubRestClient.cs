@@ -16,6 +16,7 @@ public class GitHubRestClient : IGitHubRestClient
 {
     private readonly GitHubClient _client;
     private readonly ResiliencePipeline _pipeline;
+    private string? _cachedLogin;
 
     public GitHubRestClient(GitHubClient client, ResiliencePipeline pipeline)
     {
@@ -24,16 +25,15 @@ public class GitHubRestClient : IGitHubRestClient
     }
 
     public async Task<string> GetCurrentUserLoginAsync(CancellationToken ct = default)
-    {
-        var user = await _pipeline.ExecuteAsync(async ct => await _client.User.Current(), ct);
-        return user.Login;
-    }
+        => _cachedLogin ??= (await _pipeline.ExecuteAsync(async ct => await _client.User.Current(), ct)).Login;
 
     public async Task<IReadOnlyList<PullRequestSummary>> GetMyOpenPullRequestsAsync(string? repoFilter, CancellationToken ct = default)
     {
+        var login = await GetCurrentUserLoginAsync(ct);
+
         var request = new SearchIssuesRequest
         {
-            Author = _client.Credentials.Login,
+            Author = login,
             Is = [IssueIsQualifier.Open, IssueIsQualifier.PullRequest],
         };
 
@@ -61,11 +61,12 @@ public class GitHubRestClient : IGitHubRestClient
 
     public async Task<IReadOnlyList<IssueSummary>> GetMyAssignedIssuesAsync(int sinceDays, string? repoFilter, CancellationToken ct = default)
     {
+        var login = await GetCurrentUserLoginAsync(ct);
         var since = DateTimeOffset.UtcNow.AddDays(-sinceDays);
 
         var request = new SearchIssuesRequest
         {
-            Assignee = _client.Credentials.Login,
+            Assignee = login,
             Is = [IssueIsQualifier.Open, IssueIsQualifier.Issue],
             Updated = new DateRange(since, SearchQualifierOperator.GreaterThanOrEqualTo),
         };
