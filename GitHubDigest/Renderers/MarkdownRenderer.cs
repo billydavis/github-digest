@@ -41,7 +41,6 @@ public class MarkdownRenderer
                 ReviewStatus.Approved => "✅ Approved",
                 ReviewStatus.ChangesRequested => "🔴 Changes Requested",
                 ReviewStatus.NeedsReview => "🟡 Needs Review",
-                ReviewStatus.Merged => "🔵 Merged",
                 _ => "—"
             };
 

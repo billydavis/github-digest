@@ -18,6 +18,5 @@ public enum ReviewStatus
     NeedsReview,
     ChangesRequested,
     Approved,
-    Merged,
     Unknown
 }
