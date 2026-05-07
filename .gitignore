@@ -3,5 +3,6 @@ obj/
 *.user
 .vs/
 appsettings.local.json
+nupkg/
 /probe/probe.csproj
 /probe/Program.cs
