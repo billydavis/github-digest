@@ -57,7 +57,6 @@ public class TerminalRenderer
                 ReviewStatus.Approved => "[green]Approved[/]",
                 ReviewStatus.ChangesRequested => "[red]Changes requested[/]",
                 ReviewStatus.NeedsReview => "[yellow]Awaiting review[/]",
-                ReviewStatus.Merged => "[blue]Merged[/]",
                 _ => "[grey]Unknown[/]"
             };
 
