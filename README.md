@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="GitHubDigest/icons/github-digest-icon-512.png" width="96" alt="GitHub Digest" />
+</p>
+
 # GitHub Digest
 
 Your GitHub morning briefing, straight to the terminal. See all your open pull requests, assigned issues, and weekly contribution stats across every repo in one shot.

@@ -18,10 +18,12 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>NUGET.md</PackageReadmeFile>
     <PackageTags>github cli dotnet-tool productivity</PackageTags>
+    <PackageIcon>github-digest-icon-128.png</PackageIcon>
   </PropertyGroup>
 
   <ItemGroup>
     <None Include="..\NUGET.md" Pack="true" PackagePath="\" />
+    <None Include="icons\github-digest-icon-128.png" Pack="true" PackagePath="" />
   </ItemGroup>
 
   <ItemGroup>
