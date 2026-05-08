@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -14,9 +14,15 @@
     <ToolCommandName>github-digest</ToolCommandName>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <Authors>Billy Davis</Authors>
-    <RepositoryUrl>https://github.com/billy-davis/github-digest</RepositoryUrl>
+    <RepositoryUrl>https://github.com/billydavis/github-digest</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>NUGET.md</PackageReadmeFile>
+    <PackageTags>github cli dotnet-tool productivity</PackageTags>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\NUGET.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
 
   <ItemGroup>
     <Content Include="appsettings.local.json" Condition="Exists('appsettings.local.json')">

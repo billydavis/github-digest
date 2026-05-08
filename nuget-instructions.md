@@ -29,15 +29,12 @@
    github-digest --since 7d
    ```
 
-## Before publishing, sort out
+## Before publishing
 
-- **RepositoryUrl** in the csproj points to `github.com/billy-davis/github-digest` — make sure the repo is public and the URL is correct
-- **README packaging** — NuGet shows a blank page without one. Add to csproj:
-  ```xml
-  <PackageReadmeFile>README.md</PackageReadmeFile>
-  ```
-  And include the file in the pack:
-  ```xml
-  <None Include="..\README.md" Pack="true" PackagePath="\" />
-  ```
-- **Token setup instructions** — the README needs clear steps for new users to configure their PAT (`GITHUB__TOKEN` env var or `appsettings.json`). This is the main friction point for first-time installs.
+- **RepositoryUrl** in the csproj points to `github.com/billydavis/github-digest` — make sure the repo is public before publishing.
+
+## Already done
+
+- **README packaging** — `NUGET.md` is wired up via `<PackageReadmeFile>` and included in the pack via `<None Pack="true">`. NuGet.org will display it on the package page.
+- **Token setup instructions** — `NUGET.md` covers PAT creation, env var setup, and the error shown when the token is missing.
+- **Package tags** — `<PackageTags>` is set for NuGet.org search discoverability.

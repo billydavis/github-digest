@@ -1,6 +1,6 @@
 # GitHub Digest
 
-Your GitHub morning briefing, straight to the terminal. See all your open pull requests, assigned issues, and weekly contribution stats across every repo in one shot.
+Your GitHub morning briefing, straight to the terminal. See all your open pull requests, assigned issues, and contribution stats across every repo in one shot.
 
 ```
 GitHub Digest · Thu May 8 · billydavis
@@ -23,9 +23,11 @@ Assigned issues, last 14 days (1)
  myorg/api-server  Investigate memory leak      bug              May 7   
 ```
 
-## Installation
+## Requirements
 
-Requires [.NET 9 SDK](https://dotnet.microsoft.com/download) or later.
+- .NET 9 runtime or later
+
+## Installation
 
 ```sh
 dotnet tool install --global GitHubDigest
@@ -48,7 +50,7 @@ $env:GITHUB__TOKEN = "ghp_your_token_here"
 export GITHUB__TOKEN="ghp_your_token_here"
 ```
 
-Or add it to `appsettings.local.json` in the tool directory (never commit this file):
+Or add it to `appsettings.local.json` next to the installed tool (never commit this file):
 
 ```json
 {
@@ -57,6 +59,8 @@ Or add it to `appsettings.local.json` in the tool directory (never commit this f
   }
 }
 ```
+
+If the token is missing or invalid, the tool will exit with an error message on startup.
 
 ## Usage
 
@@ -68,19 +72,47 @@ github-digest
 github-digest --since 7d
 github-digest --since 30d
 
-# Scope to a single repo
+# Scope to a specific repo or org
 github-digest --repo owner/repo-name
+github-digest --repo myorg
 
 # Export to a markdown file
 github-digest --output markdown
 
-# Output raw JSON (useful for scripting or piping)
+# Output raw JSON for scripting or piping
 github-digest --output json
 ```
 
-The `--output markdown` flag writes a `github-digest-YYYY-MM-DD.md` file in the current directory.
+### Flags
 
-The `--output json` flag writes the full report to stdout as JSON, suitable for piping into `jq` or other tools:
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--since` | `14d` | Lookback window (e.g. `7d`, `14d`, `30d`) |
+| `--repo` | _(all repos)_ | Scope to an org or specific `owner/repo` |
+| `--output` | `terminal` | Output format: `terminal`, `markdown`, or `json` |
+
+### Markdown export
+
+`--output markdown` writes a `github-digest-YYYY-MM-DD.md` file in the current directory.
+
+### Exit codes
+
+| Code | Meaning |
+|------|---------|
+| `0` | Success |
+| `1` | Error (missing token, API failure, network error) |
+
+Error details are written to stderr, so stdout remains clean for piping.
+
+### JSON output
+
+`--output json` writes the full report to stdout — no spinner, no color codes. Useful for piping into `jq` or other tools:
+
+```sh
+github-digest --output json | jq '.openPullRequests[] | select(.reviewStatus == "needsReview")'
+```
+
+The JSON shape:
 
 ```json
 {
@@ -119,26 +151,3 @@ The `--output json` flag writes the full report to stdout as JSON, suitable for 
   "username": "billydavis"
 }
 ```
-
-## Building from source
-
-```sh
-git clone https://github.com/billydavis/github-digest
-cd github-digest/GitHubDigest
-dotnet run -- --since 7d
-```
-
-To pack and install locally:
-
-```sh
-dotnet pack
-dotnet tool install --global --add-source ./bin/Release GitHubDigest
-```
-
-## Tech stack
-
-- [Octokit](https://github.com/octokit/octokit.net) — GitHub REST API
-- [Octokit.GraphQL](https://github.com/octokit/octokit.graphql.net) — GitHub GraphQL API
-- [Spectre.Console](https://spectreconsole.net) — terminal rendering
-- [System.CommandLine](https://github.com/dotnet/command-line-api) — CLI flags
-- .NET 9 · packaged as a `dotnet tool`

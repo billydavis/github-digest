@@ -24,8 +24,10 @@ var config = new ConfigurationBuilder()
 
 var token = config["GitHub:Token"];
 if (string.IsNullOrWhiteSpace(token))
-    throw new InvalidOperationException(
-        "GitHub token not configured. Set GITHUB__TOKEN env var or GitHub:Token in appsettings.json.");
+{
+    Console.Error.WriteLine("Error: GitHub token not configured. Set GITHUB__TOKEN env var or GitHub:Token in appsettings.json.");
+    return 1;
+}
 
 var services = new ServiceCollection();
 
@@ -57,4 +59,21 @@ services.AddSingleton<DigestCommand>();
 var provider = services.BuildServiceProvider();
 
 var command = provider.GetRequiredService<DigestCommand>();
-return await command.Parse(args).InvokeAsync();
+try
+{
+    return await command.Parse(args).InvokeAsync();
+}
+catch (OperationCanceledException)
+{
+    return 0;
+}
+catch (OctokitRest.AuthorizationException)
+{
+    Console.Error.WriteLine("Error: GitHub token is invalid or expired. Generate a new token at https://github.com/settings/tokens");
+    return 1;
+}
+catch (Exception ex)
+{
+    Console.Error.WriteLine($"Error: {ex.Message}");
+    return 1;
+}
