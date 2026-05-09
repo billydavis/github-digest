@@ -6,38 +6,33 @@ namespace GitHubDigest.Renderers;
 
 public class TerminalRenderer
 {
-    private const int MaxTitleWidth = 60;
+    private const int MaxTitleWidth = 48;
 
     public void Render(DigestReport report, int sinceDays)
     {
-        AnsiConsole.MarkupLine(
-            $"[bold white]GitHub Digest[/] [grey]·[/] [white]{DateTime.Now:ddd MMM d}[/] [grey]·[/] [yellow]{Markup.Escape(report.Username)}[/]");
-        AnsiConsole.Write(new Rule().RuleStyle("grey dim"));
         AnsiConsole.WriteLine();
-
         RenderContributions(report.Contributions, sinceDays);
-        RenderPullRequests(report.OpenPullRequests, sinceDays);
+        RenderPullRequests(report.OpenPullRequests);
         RenderIssues(report.AssignedIssues, sinceDays);
     }
 
     private static void RenderContributions(ContributionSummary c, int sinceDays)
     {
-        AnsiConsole.MarkupLine($"[yellow]{SinceLabel(sinceDays)}[/]");
+        AnsiConsole.MarkupLine($"[dim]{SinceLabel(sinceDays)}[/]");
         AnsiConsole.MarkupLine(
-            $"[bold]{c.TotalCommits}[/] [grey]commits[/]  " +
-            $"[bold]{c.TotalPullRequestsOpened}[/] [grey]PRs opened[/]  " +
-            $"[bold]{c.TotalReviewsGiven}[/] [grey]reviews given[/]");
+            $"[bold green]{c.TotalCommits}[/] [dim]commits[/]  [dim]·[/]  " +
+            $"[bold white]{c.TotalPullRequestsOpened}[/] [dim]PRs opened[/]  [dim]·[/]  " +
+            $"[bold green]{c.TotalReviewsGiven}[/] [dim]reviews given[/]");
         AnsiConsole.WriteLine();
     }
 
-    private static void RenderPullRequests(IReadOnlyList<PullRequestSummary> prs, int sinceDays)
+    private static void RenderPullRequests(IReadOnlyList<PullRequestSummary> prs)
     {
-        AnsiConsole.MarkupLine($"[yellow]Open pull requests ({prs.Count})[/]");
-        AnsiConsole.WriteLine();
+        AnsiConsole.MarkupLine($"[bold white]Open pull requests[/] [dim]({prs.Count})[/]");
 
         if (prs.Count == 0)
         {
-            AnsiConsole.MarkupLine("[grey]No open pull requests.[/]");
+            AnsiConsole.MarkupLine("[dim]  No open pull requests.[/]");
             AnsiConsole.WriteLine();
             return;
         }
@@ -45,26 +40,19 @@ public class TerminalRenderer
         var table = new Table()
             .Border(TableBorder.Simple)
             .BorderStyle(new Style(Color.Grey))
-            .AddColumn(new TableColumn("[grey]Repo[/]"))
-            .AddColumn(new TableColumn("[grey]Title[/]"))
-            .AddColumn(new TableColumn("[grey]Review status[/]"))
-            .AddColumn(new TableColumn("[grey]Updated[/]"));
+            .AddColumn(new TableColumn("[dim]Repo[/]"))
+            .AddColumn(new TableColumn("[dim]Title[/]"))
+            .AddColumn(new TableColumn("[dim]Review status[/]"))
+            .AddColumn(new TableColumn("[dim]Updated[/]"));
 
         foreach (var pr in prs.OrderByDescending(p => p.UpdatedAt))
         {
-            var reviewMarkup = pr.ReviewStatus switch
-            {
-                ReviewStatus.Approved => "[green]Approved[/]",
-                ReviewStatus.ChangesRequested => "[red]Changes requested[/]",
-                ReviewStatus.NeedsReview => "[yellow]Awaiting review[/]",
-                _ => "[grey]Unknown[/]"
-            };
-
+            var (statusText, statusColor) = ReviewStatusParts(pr.ReviewStatus);
             table.AddRow(
                 $"[cyan]{Markup.Escape(Sanitize(pr.Repo))}[/]",
                 Markup.Escape(Sanitize(pr.Title, MaxTitleWidth)),
-                reviewMarkup,
-                RelativeTime(pr.UpdatedAt)
+                $"[{statusColor}]{Markup.Escape(statusText)}[/]",
+                $"[dim]{RelativeDate(pr.UpdatedAt)}[/]"
             );
         }
 
@@ -74,12 +62,11 @@ public class TerminalRenderer
 
     private static void RenderIssues(IReadOnlyList<IssueSummary> issues, int sinceDays)
     {
-        AnsiConsole.MarkupLine($"[yellow]Assigned issues, {SinceLabel(sinceDays).ToLower()} ({issues.Count})[/]");
-        AnsiConsole.WriteLine();
+        AnsiConsole.MarkupLine($"[bold white]Assigned issues, {SinceLabel(sinceDays).ToLower()}[/] [dim]({issues.Count})[/]");
 
         if (issues.Count == 0)
         {
-            AnsiConsole.MarkupLine("[grey]No assigned issues updated recently.[/]");
+            AnsiConsole.MarkupLine("[dim]  No assigned issues updated recently.[/]");
             AnsiConsole.WriteLine();
             return;
         }
@@ -87,27 +74,51 @@ public class TerminalRenderer
         var table = new Table()
             .Border(TableBorder.Simple)
             .BorderStyle(new Style(Color.Grey))
-            .AddColumn(new TableColumn("[grey]Repo[/]"))
-            .AddColumn(new TableColumn("[grey]Title[/]"))
-            .AddColumn(new TableColumn("[grey]Labels[/]"))
-            .AddColumn(new TableColumn("[grey]Updated[/]"));
+            .AddColumn(new TableColumn("[dim]Repo[/]"))
+            .AddColumn(new TableColumn("[dim]Title[/]"))
+            .AddColumn(new TableColumn("[dim]Labels[/]"))
+            .AddColumn(new TableColumn("[dim]Updated[/]"));
 
         foreach (var issue in issues.OrderByDescending(i => i.UpdatedAt))
         {
             var labelsMarkup = issue.Labels.Length > 0
-                ? string.Join(", ", issue.Labels.Select(l => $"[{LabelColor(l)}]{Markup.Escape(l)}[/]"))
-                : "[grey]-[/]";
+                ? string.Join(" ", issue.Labels.Select(LabelBadge))
+                : "[dim]-[/]";
 
             table.AddRow(
                 $"[cyan]{Markup.Escape(Sanitize(issue.Repo))}[/]",
                 Markup.Escape(Sanitize(issue.Title, MaxTitleWidth)),
                 labelsMarkup,
-                RelativeTime(issue.UpdatedAt)
+                $"[dim]{RelativeDate(issue.UpdatedAt)}[/]"
             );
         }
 
         AnsiConsole.Write(table);
         AnsiConsole.WriteLine();
+    }
+
+    private static (string text, string color) ReviewStatusParts(ReviewStatus status) => status switch
+    {
+        ReviewStatus.Approved         => ("Approved", "green"),
+        ReviewStatus.ChangesRequested => ("Changes requested", "red"),
+        ReviewStatus.NeedsReview      => ("Awaiting review", "yellow"),
+        _                             => ("Unknown", "dim")
+    };
+
+    private static string LabelBadge(string label)
+    {
+        var l = label.ToLowerInvariant();
+        var (fg, bg) = l switch
+        {
+            _ when l.Contains("bug")                               => ("white", "red3"),
+            _ when l.Contains("feature") || l.Contains("enhance") => ("white", "blue"),
+            _ when l.Contains("doc")                               => ("white", "grey50"),
+            _ when l.Contains("question")                          => ("white", "purple"),
+            _ when l.Contains("help")                              => ("black", "green4"),
+            _ when l.Contains("urgent") || l.Contains("critical")  => ("white", "red1"),
+            _                                                      => ("white", "grey30")
+        };
+        return $"[{fg} on {bg}] {Markup.Escape(label)} [/]";
     }
 
     private static string SinceLabel(int days) => days switch
@@ -116,23 +127,12 @@ public class TerminalRenderer
         _ => $"Last {days} days"
     };
 
-    private static string RelativeTime(DateTimeOffset dt)
+    private static string RelativeDate(DateTimeOffset dt)
     {
         var age = DateTimeOffset.UtcNow - dt;
         if (age.TotalMinutes < 60) return $"{(int)age.TotalMinutes}m ago";
         if (age.TotalHours < 24) return $"{(int)age.TotalHours}h ago";
-        if (age.TotalDays < 2) return "yesterday";
-        if (age.TotalDays < 7) return $"{(int)age.TotalDays} days ago";
         return dt.LocalDateTime.ToString("MMM d");
-    }
-
-    private static string LabelColor(string label)
-    {
-        var l = label.ToLowerInvariant();
-        if (l.Contains("high") || l.Contains("critical") || l.Contains("urgent")) return "red";
-        if (l.Contains("medium") || l.Contains("moderate")) return "yellow";
-        if (l.Contains("low")) return "grey";
-        return "white";
     }
 
     private static string Sanitize(string text, int maxWidth = int.MaxValue)
@@ -146,7 +146,7 @@ public class TerminalRenderer
         }
         var result = sb.ToString().Trim();
         if (result.Length > maxWidth)
-            result = result[..maxWidth].TrimEnd() + "…";
+            result = result[..Math.Max(0, maxWidth - 3)].TrimEnd() + "...";
         return result;
     }
 }
