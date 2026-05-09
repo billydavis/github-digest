@@ -16,6 +16,9 @@ jobs:
         with:
           dotnet-version: '9.x'
 
+      - name: Restore
+        run: dotnet restore GitHubDigest/GitHubDigest.csproj
+
       - name: Pack
         run: dotnet pack GitHubDigest/GitHubDigest.csproj --configuration Release --no-restore
 
