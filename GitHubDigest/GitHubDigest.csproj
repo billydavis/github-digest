@@ -7,7 +7,7 @@
     <Nullable>enable</Nullable>
     <AssemblyName>github-digest</AssemblyName>
     <PackageId>GitHubDigest</PackageId>
-    <Version>0.1.1</Version>
+    <Version>0.1.2</Version>
     <Description>See all your open PRs, assigned issues, and contribution stats across every repo — straight to the terminal.</Description>
     <IsPackable>true</IsPackable>
     <PackAsTool>true</PackAsTool>
